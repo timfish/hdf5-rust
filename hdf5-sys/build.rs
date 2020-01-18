@@ -10,6 +10,12 @@ use std::str;
 
 use regex::Regex;
 
+macro_rules! feature {
+    ($feature:expr) => {
+        std::env::var(concat!("CARGO_FEATURE_", $feature))
+    };
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Version {
     pub major: u8,
@@ -601,10 +607,92 @@ impl Config {
 }
 
 fn main() {
-    let mut searcher = LibrarySearcher::new_from_env();
-    searcher.try_locate_hdf5_library();
-    let config = searcher.finalize();
-    println!("{:#?}", config);
-    config.emit_link_flags();
+    if feature!("STATIC").is_ok() {
+        build_and_emit();
+    } else {
+        let mut searcher = LibrarySearcher::new_from_env();
+        searcher.try_locate_hdf5_library();
+        let config = searcher.finalize();
+        println!("{:#?}", config);
+        config.emit_link_flags();
+        config.emit_cfg_flags();
+    }
+}
+
+fn build_and_emit() {
+    println!("cargo:rerun-if-changed=build.rs");
+    let mut hdf5config = cmake::Config::new("source");
+    hdf5config
+        .define("HDF5_NO_PACKAGES", "ON")
+        .define("BUILD_SHARED_LIBS", "OFF") // Only need to build a static library
+        .define("BUILD_TESTING", "OFF")
+        .define("HDF5_BUILD_TOOLS", "OFF")
+        .define("HDF5_BUILD_EXAMPLES", "OFF")
+        //
+        .define("HDF5_BUILD_JAVA", "OFF")
+        .define("HDF5_BUILD_FORTRAN", "OFF")
+        .define("HDF5_BUILD_CPP_LIB", "OFF")
+        // Default, with feature flags
+        .define("HDF5_ENABLE_PARALLEL", "OFF")
+        .define("HDF5_ENABLE_DEPRECATED_SYMBOLS", "OFF")
+        .define("HDF5_ENABLE_THREADSAFE", "OFF")
+        .define("ALLOW_UNSUPPORTED", "OFF")
+        .define("HDF5_BUILD_HL_LIB", "OFF");
+
+    if feature!("ZLIB").is_ok() {
+        let zlib_header = std::env::var("DEP_Z_INCLUDE").unwrap();
+        let zlib_lib = "z";
+        hdf5config
+            .define("HDF5_ENABLE_Z_LIB_SUPPORT", "ON")
+            .define("ZLIB_USE_EXTERNAL", "ON")
+            .define("H5_ZLIB_HEADER", zlib_header)
+            .define("ZLIB_STATIC_LIBRARY", zlib_lib);
+    }
+
+    if feature!("DEPRECATED").is_ok() {
+        hdf5config.define("HDF5_ENABLE_DEPRECATED_SYMBOLS", "ON");
+    }
+
+
+    if feature!("THREADSAFE").is_ok() {
+        hdf5config.define("HDF5_ENABLE_THREADSAFE", "ON");
+        if feature!("HL").is_ok() || feature!("PARALLEL").is_ok() {
+            println!("cargo:warning=Unsupported selection of items. This is probably ok");
+            hdf5config.define("ALLOW_UNSUPPORTED", "ON");
+        }
+    }
+
+    if feature!("HL").is_ok() {
+        let hdf5_hl_lib = "hdf5_hl";
+        println!("cargo:rustc-link-lib=static={}", hdf5_hl_lib);
+        println!("cargo:hl_library={}", hdf5_hl_lib);
+        hdf5config.define("HDF5_BUILD_HL_LIB", "ON");
+    }
+
+    if feature!("PARALLEL").is_ok() {
+        // TODO: Find which dependencies to link
+        hdf5config.define("HDF5_ENABLE_PARALLEL", "ON");
+    }
+
+    let hdf5 = hdf5config
+        .profile("RelWithDebInfo") // TODO: detect opt-level and fix names of libraries
+        .build();
+
+    println!("cargo:rustc-link-search=native={}/lib", hdf5.display());
+    println!("cargo:root={}", hdf5.display());
+
+    let hdf5_incdir = format!("{}/include", hdf5.display());
+    println!("cargo:include={}", hdf5_incdir);
+
+    let hdf5_lib = "hdf5";
+    println!("cargo:rustc-link-lib=static={}", hdf5_lib);
+    println!("cargo:library={}", hdf5_lib);
+
+    let header = Header::parse(&hdf5_incdir);
+    let config = Config {
+        header,
+        inc_dir: "".into(),
+        link_paths: Vec::new(),
+    };
     config.emit_cfg_flags();
 }

@@ -1,0 +1,3 @@
+[submodule "hdf5-sys/source"]
+	path = hdf5-sys/source
+	url = https://bitbucket.hdfgroup.org/scm/hdffv/hdf5.git
