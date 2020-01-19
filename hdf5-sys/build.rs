@@ -590,18 +590,23 @@ impl Config {
         vs.extend((0..=5).map(|v| Version::new(1, 10, v))); // 1.10.[0-5]
         for v in vs.into_iter().filter(|&v| version >= v) {
             println!("cargo:rustc-cfg=hdf5_{}_{}_{}", v.major, v.minor, v.micro);
+            println!("cargo:version_{}_{}_{}=1", v.major, v.minor, v.micro);
         }
         if self.header.have_stdbool_h {
             println!("cargo:rustc-cfg=h5_have_stdbool_h");
+            println!("cargo:have_stdbool=1");
         }
         if self.header.have_direct {
             println!("cargo:rustc-cfg=h5_have_direct");
+            println!("cargo:have_direct=1");
         }
         if self.header.have_parallel {
             println!("cargo:rustc-cfg=h5_have_parallel");
+            println!("cargo:have_parallel=1");
         }
         if self.header.have_threadsafe {
             println!("cargo:rustc-cfg=h5_have_threadsafe");
+            println!("cargo:have_threadsafe=1");
         }
     }
 }
