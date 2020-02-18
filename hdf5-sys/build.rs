@@ -645,11 +645,12 @@ fn build_and_emit() {
         .define("HDF5_BUILD_HL_LIB", "OFF");
 
     if feature!("ZLIB").is_ok() {
-        let zlib_header = std::env::var("DEP_Z_INCLUDE").unwrap();
+        let zlib_include_dir = std::env::var_os("DEP_Z_INCLUDE").unwrap();
+        let mut zlib_header = std::env::split_paths(&zlib_include_dir).nth(0).unwrap();
+        zlib_header.push("zlib.h");
         let zlib_lib = "z";
         hdf5config
             .define("HDF5_ENABLE_Z_LIB_SUPPORT", "ON")
-            .define("ZLIB_USE_EXTERNAL", "ON")
             .define("H5_ZLIB_HEADER", zlib_header)
             .define("ZLIB_STATIC_LIBRARY", zlib_lib);
     }
