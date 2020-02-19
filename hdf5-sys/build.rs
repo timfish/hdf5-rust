@@ -649,10 +649,12 @@ fn build_and_emit() {
         let mut zlib_header = std::env::split_paths(&zlib_include_dir).nth(0).unwrap();
         zlib_header.push("zlib.h");
         let zlib_lib = "z";
+        // libz-sys does not emit a link flag, so we emit one here
+        println!("cargo:rustc-link-lib=static={}", &zlib_lib);
         hdf5config
             .define("HDF5_ENABLE_Z_LIB_SUPPORT", "ON")
             .define("H5_ZLIB_HEADER", zlib_header)
-            .define("ZLIB_STATIC_LIBRARY", zlib_lib);
+            .define("ZLIB_STATIC_LIBRARY", &zlib_lib);
     }
 
     if feature!("DEPRECATED").is_ok() {
