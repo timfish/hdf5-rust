@@ -671,6 +671,9 @@ fn build_and_emit() {
     }
 
     if feature!("HL").is_ok() {
+        #[cfg(target_os = "windows")]
+        let hdf5_hl_lib = "libhdf5_hl";
+        #[cfg(not(target_os="windows"))]
         let hdf5_hl_lib = "hdf5_hl";
         println!("cargo:rustc-link-lib=static={}", hdf5_hl_lib);
         println!("cargo:hl_library={}", hdf5_hl_lib);
@@ -692,6 +695,9 @@ fn build_and_emit() {
     let hdf5_incdir = format!("{}/include", hdf5.display());
     println!("cargo:include={}", hdf5_incdir);
 
+    #[cfg(target_os = "windows")]
+    let hdf5_lib = "libhdf5";
+    #[cfg(not(target_os="windows"))]
     let hdf5_lib = "hdf5";
     println!("cargo:rustc-link-lib=static={}", hdf5_lib);
     println!("cargo:library={}", hdf5_lib);
