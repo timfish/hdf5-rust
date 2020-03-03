@@ -12,6 +12,9 @@ fn main() {
         if key == "DEP_HDF5_HAVE_THREADSAFE" {
             println!("cargo:rustc-cfg=h5_have_threadsafe");
         }
+        if key == "DEP_HDF5_IS_DLL" {
+            println!("cargo:rustc-cfg=h5_is_dll");
+        }
         if key.starts_with("DEP_HDF5_VERSION_") {
             let version = key.trim_start_matches("DEP_HDF5_VERSION_");
             println!("cargo:rustc-cfg=hdf5_{}", version);

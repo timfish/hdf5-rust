@@ -581,6 +581,9 @@ impl Config {
         }
         println!("cargo:rerun-if-env-changed=HDF5_DIR");
         println!("cargo:rerun-if-env-changed=HDF5_VERSION");
+        if cfg!(target_env = "msvc") {
+            println!("cargo:is_dll=1");
+        }
     }
 
     pub fn emit_cfg_flags(&self) {
